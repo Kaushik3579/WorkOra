@@ -4,6 +4,7 @@ import Login from './pages/login';
 import Register from './pages/register';
 import UserType from './pages/user-type';
 import FreelancerDashboard from './pages/freelancer/dashboard';
+import FreelancerDetails from './pages/freelancer/details';
 import ClientDashboard from './pages/client/dashboard';
 import AdminDashboard from './pages/admin/dashboard';
 import ProjectList from './pages/projects/list';
@@ -36,6 +37,12 @@ function App() {
             <>
               <Navigation />
               <FreelancerDashboard />
+            </>
+          } />
+          <Route path="/freelancer/details" element={
+            <>
+              <Navigation />
+              <FreelancerDetails />
             </>
           } />
           <Route path="/client/dashboard" element={

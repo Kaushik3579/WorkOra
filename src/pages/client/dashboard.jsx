@@ -40,6 +40,7 @@ export default function ClientDashboard() {
   const [selectedField, setSelectedField] = useState('all');
   const [freelancers, setFreelancers] = useState([]);
   const [selectedFreelancer, setSelectedFreelancer] = useState(null);
+  const [selectedFreelancerId, setSelectedFreelancerId] = useState(null); // Add this state to store the selected freelancer's ID
 
   // Mock data - replace with real data from backend
   const stats = {
@@ -103,6 +104,7 @@ export default function ClientDashboard() {
 
   const handleFreelancerClick = (freelancer) => {
     setSelectedFreelancer(freelancer);
+    setSelectedFreelancerId(freelancer.id); // Update the selected freelancer's ID
     onOpen();
   };
 

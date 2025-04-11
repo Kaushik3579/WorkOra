@@ -1,120 +1,283 @@
-import {
-  Box,
-  Container,
-  Grid,
-  Heading,
-  Text,
-  VStack,
-  HStack,
-  Badge,
-  Card,
-  CardBody,
-  Stat,
-  StatLabel,
-  StatNumber,
-  StatHelpText,
-  SimpleGrid,
+import { 
+  Box, 
+  Heading, 
+  Text, 
+  VStack, 
+  HStack, 
+  SimpleGrid, 
+  Card, 
+  CardBody, 
+  Stat, 
+  StatLabel, 
+  StatNumber, 
+  StatHelpText, 
+  Button, 
+  Badge, 
+  Progress, 
+  IconButton, 
+  Divider, 
+  useToast
 } from '@chakra-ui/react';
-import { Activity, Briefcase, DollarSign } from 'lucide-react';
+import { CheckCircle, DollarSign, Calendar, BarChart2, FileText } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { auth, db } from '../../config/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 export default function FreelancerDashboard() {
-  // Mock data - replace with real data from backend
-  const stats = {
-    earnings: 2500,
-    activeProjects: 3,
-    completedProjects: 12,
+  const [stats, setStats] = useState({
+    totalEarnings: 0,
+    activeProjects: 0,
+    completedProjects: 0,
+    pendingPayments: 0
+  });
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const toast = useToast();
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        if (auth.currentUser) {
+          // Fetch projects
+          const projectsQuery = query(
+            collection(db, 'projects'),
+            where('freelancerId', '==', auth.currentUser.uid)
+          );
+          const projectsSnapshot = await getDocs(projectsQuery);
+          
+          let active = 0;
+          let completed = 0;
+          const projectList = projectsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            if (data.status === 'active' || data.status === 'in-progress') {
+              active++;
+            } else if (data.status === 'completed') {
+              completed++;
+            }
+            return { id: doc.id, ...data };
+          });
+          
+          setProjects(projectList);
+          
+          // Fetch payments
+          const paymentsQuery = query(
+            collection(db, 'payments'),
+            where('freelancerId', '==', auth.currentUser.uid)
+          );
+          const paymentsSnapshot = await getDocs(paymentsQuery);
+          
+          let totalEarnings = 0;
+          let pending = 0;
+          paymentsSnapshot.forEach(doc => {
+            const payment = doc.data();
+            if (payment.status === 'completed') {
+              totalEarnings += payment.amount;
+            } else if (payment.status === 'pending') {
+              pending += payment.amount;
+            }
+          });
+          
+          setStats({
+            totalEarnings,
+            activeProjects: active,
+            completedProjects: completed,
+            pendingPayments: pending
+          });
+        }
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to load dashboard data',
+          status: 'error',
+          duration: 5000,
+          isClosable: true
+        });
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchDashboardData();
+  }, [toast]);
+
+  const handleViewProject = (projectId) => {
+    // Navigate to project details page - implementation depends on routing
+    console.log(`View project ${projectId}`);
   };
 
-  const activeProjects = [
-    {
-      id: 1,
-      title: 'Website Development',
-      client: 'Tech Corp',
-      dueDate: '2025-05-01',
-      status: 'in-progress',
-    },
-    {
-      id: 2,
-      title: 'Mobile App UI Design',
-      client: 'StartupX',
-      dueDate: '2025-04-20',
-      status: 'review',
-    },
-  ];
+  const handleRequestPayment = (projectId) => {
+    // Trigger payment request workflow
+    toast({
+      title: 'Payment Requested',
+      description: 'Payment request sent for project',
+      status: 'success',
+      duration: 3000,
+      isClosable: true
+    });
+  };
 
   return (
-    <Container maxW="container.xl" py={8}>
+    <Box p={6} maxW="container.xl" mx="auto">
       <VStack spacing={8} align="stretch">
         <HStack justify="space-between">
-          <Heading size="lg">Welcome back, John!</Heading>
+          <Heading>Freelancer Dashboard</Heading>
           <Text color="gray.500">{new Date().toLocaleDateString()}</Text>
         </HStack>
 
-        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
+        {/* Stats Overview */}
+        <SimpleGrid columns={{ base: 1, md: 4 }} spacing={6}>
           <Card>
             <CardBody>
               <Stat>
                 <StatLabel>Total Earnings</StatLabel>
-                <HStack>
-                  <DollarSign size={20} />
-                  <StatNumber>${stats.earnings}</StatNumber>
-                </HStack>
-                <StatHelpText>This month</StatHelpText>
+                <StatNumber>${stats.totalEarnings.toFixed(2)}</StatNumber>
+                <StatHelpText>All time</StatHelpText>
               </Stat>
+              <DollarSign size={24} color="green" />
             </CardBody>
           </Card>
-
+          
           <Card>
             <CardBody>
               <Stat>
                 <StatLabel>Active Projects</StatLabel>
-                <HStack>
-                  <Activity size={20} />
-                  <StatNumber>{stats.activeProjects}</StatNumber>
-                </HStack>
+                <StatNumber>{stats.activeProjects}</StatNumber>
                 <StatHelpText>In progress</StatHelpText>
               </Stat>
+              <BarChart2 size={24} color="blue" />
             </CardBody>
           </Card>
-
+          
           <Card>
             <CardBody>
               <Stat>
                 <StatLabel>Completed Projects</StatLabel>
-                <HStack>
-                  <Briefcase size={20} />
-                  <StatNumber>{stats.completedProjects}</StatNumber>
-                </HStack>
+                <StatNumber>{stats.completedProjects}</StatNumber>
                 <StatHelpText>All time</StatHelpText>
               </Stat>
+              <CheckCircle size={24} color="green" />
+            </CardBody>
+          </Card>
+          
+          <Card>
+            <CardBody>
+              <Stat>
+                <StatLabel>Pending Payments</StatLabel>
+                <StatNumber>${stats.pendingPayments.toFixed(2)}</StatNumber>
+                <StatHelpText>Awaiting</StatHelpText>
+              </Stat>
+              <Calendar size={24} color="orange" />
             </CardBody>
           </Card>
         </SimpleGrid>
 
+        {/* Active Projects */}
         <Box>
           <Heading size="md" mb={4}>Active Projects</Heading>
-          <Grid gap={4}>
-            {activeProjects.map(project => (
-              <Card key={project.id}>
-                <CardBody>
-                  <HStack justify="space-between">
-                    <VStack align="start" spacing={2}>
-                      <Heading size="sm">{project.title}</Heading>
-                      <Text color="gray.600">Client: {project.client}</Text>
-                      <Text fontSize="sm">Due: {project.dueDate}</Text>
-                    </VStack>
-                    <Badge
-                      colorScheme={project.status === 'in-progress' ? 'blue' : 'orange'}
-                    >
-                      {project.status}
-                    </Badge>
-                  </HStack>
-                </CardBody>
-              </Card>
-            ))}
-          </Grid>
+          <VStack spacing={4} align="stretch">
+            {projects.length > 0 ? (
+              projects
+                .filter(p => p.status === 'active' || p.status === 'in-progress')
+                .map(project => (
+                  <Card key={project.id} variant="outline">
+                    <CardBody>
+                      <HStack justify="space-between" align="flex-start">
+                        <Box>
+                          <Heading size="sm">{project.title || 'Untitled Project'}</Heading>
+                          <Text color="gray.500">Client: {project.clientName || 'N/A'}</Text>
+                          <Text fontSize="sm">Due: {project.dueDate || 'Not set'}</Text>
+                          {project.progress && (
+                            <Box mt={2}>
+                              <Text fontSize="xs">Progress: {project.progress}%</Text>
+                              <Progress value={project.progress} size="sm" />
+                            </Box>
+                          )}
+                        </Box>
+                        <HStack>
+                          <Badge 
+                            colorScheme={project.status === 'active' ? 'blue' : 'yellow'}
+                          >
+                            {project.status}
+                          </Badge>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleViewProject(project.id)}
+                          >
+                            View Details
+                          </Button>
+                          {project.status === 'in-progress' && (
+                            <Button 
+                              size="sm" 
+                              colorScheme="green"
+                              onClick={() => handleRequestPayment(project.id)}
+                            >
+                              Request Payment
+                            </Button>
+                          )}
+                        </HStack>
+                      </HStack>
+                    </CardBody>
+                  </Card>
+                ))
+            ) : (
+              <Box textAlign="center" p={6} border="1px dashed" borderColor="gray.300" borderRadius="md">
+                <Text color="gray.500">No active projects. Find new opportunities!</Text>
+                <Button mt={4} colorScheme="blue">Browse Projects</Button>
+              </Box>
+            )}
+          </VStack>
+        </Box>
+
+        {/* Quick Actions */}
+        <Box>
+          <Heading size="md" mb={4}>Quick Actions</Heading>
+          <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={4}>
+            <Button leftIcon={<FileText size={18} />} variant="outline">
+              Create Proposal
+            </Button>
+            <Button leftIcon={<DollarSign size={18} />} variant="outline">
+              View Payments
+            </Button>
+            <Button leftIcon={<Calendar size={18} />} variant="outline">
+              Schedule Meeting
+            </Button>
+          </SimpleGrid>
+        </Box>
+
+        {/* Recent Activity */}
+        <Box>
+          <Heading size="md" mb={4}>Recent Activity</Heading>
+          <Card>
+            <CardBody>
+              <VStack spacing={4} align="stretch" divider={<Divider />}>
+                <HStack justify="space-between">
+                  <Box>
+                    <Text fontWeight="bold">Project Completed: Website Redesign</Text>
+                    <Text fontSize="sm" color="gray.500">Completed on {new Date().toLocaleDateString()}</Text>
+                  </Box>
+                  <Text color="green.500">+$1,200</Text>
+                </HStack>
+                <HStack justify="space-between">
+                  <Box>
+                    <Text fontWeight="bold">Payment Received: App Development</Text>
+                    <Text fontSize="sm" color="gray.500">Received on {new Date(Date.now() - 86400000 * 3).toLocaleDateString()}</Text>
+                  </Box>
+                  <Text color="green.500">+$800</Text>
+                </HStack>
+                <HStack justify="space-between">
+                  <Box>
+                    <Text fontWeight="bold">New Project Started: E-commerce Site</Text>
+                    <Text fontSize="sm" color="gray.500">Started on {new Date(Date.now() - 86400000 * 5).toLocaleDateString()}</Text>
+                  </Box>
+                  <Text color="blue.500">In Progress</Text>
+                </HStack>
+              </VStack>
+            </CardBody>
+          </Card>
         </Box>
       </VStack>
-    </Container>
+    </Box>
   );
 }

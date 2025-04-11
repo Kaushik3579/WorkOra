@@ -19,51 +19,33 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   
   // Get user type from multiple sources with priority
-  const userType = location.state?.userType || 
-                  sessionStorage.getItem('selectedUserType') || 
-                  localStorage.getItem('selectedUserType');
+  const userType = location.state?.userType || sessionStorage.getItem('selectedUserType');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        if (!userType) {
+          navigate('/user-type');
+          return;
+        }
+        
+        // Existing user check
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         if (userDoc.exists()) {
-          // Existing user - go to dashboard
-          const userData = userDoc.data();
-          redirectToDashboard(userData.userType);
-        } else if (userType) {
-          // New user - create account with selected type
-          await createNewUser(user);
-          redirectToDashboard(userType);
+          navigate(`/${userType}/dashboard`);
         } else {
-          // No type selected - go back to selection
-          navigate('/');
+          // New user flow
+          if (userType === 'freelancer') {
+            navigate('/freelancer/details');
+          } else {
+            navigate(`/${userType}/dashboard`);
+          }
         }
       }
     });
 
     return () => unsubscribe();
   }, [userType]);
-
-  const redirectToDashboard = (type) => {
-    // Clear storage after successful redirect
-    sessionStorage.removeItem('selectedUserType');
-    localStorage.removeItem('selectedUserType');
-
-    switch(type) {
-      case 'admin': 
-        navigate('/admin/dashboard', { replace: true }); 
-        break;
-      case 'client': 
-        navigate('/client/dashboard', { replace: true }); 
-        break;
-      case 'freelancer': 
-        navigate('/freelancer/dashboard', { replace: true }); 
-        break;
-      default: 
-        navigate('/', { replace: true });
-    }
-  };
 
   const createNewUser = async (user) => {
     await setDoc(doc(db, 'users', user.uid), {
@@ -79,7 +61,41 @@ export default function Login() {
   const handleGoogleLogin = async () => {
     try {
       setIsLoading(true);
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      
+      const userType = location.state?.userType || 
+                      sessionStorage.getItem('selectedUserType') ||
+                      localStorage.getItem('selectedUserType');
+      
+      if (!userType) {
+        navigate('/user-type');
+        return;
+      }
+      
+      // Check if user exists in either collection
+      const [userDoc, freelancerDoc] = await Promise.all([
+        getDoc(doc(db, 'users', result.user.uid)),
+        getDoc(doc(db, 'freelancers', result.user.uid))
+      ]);
+      
+      if (!userDoc.exists()) {
+        // New user - create basic record
+        await setDoc(doc(db, 'users', result.user.uid), {
+          email: result.user.email,
+          userType,
+          createdAt: serverTimestamp()
+        });
+        
+        if (userType === 'freelancer' && !freelancerDoc.exists()) {
+          // New freelancer needs to complete profile
+          navigate('/freelancer/details', { replace: true });
+          return;
+        }
+      }
+      
+      // Existing user or completed profile
+      navigate(`/${userType}/dashboard`, { replace: true });
+      
     } catch (error) {
       toast({
         title: 'Login Error',
@@ -88,6 +104,7 @@ export default function Login() {
         duration: 5000,
         isClosable: true,
       });
+    } finally {
       setIsLoading(false);
     }
   };
