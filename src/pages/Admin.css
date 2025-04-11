@@ -1,0 +1,331 @@
+/* WorkoraAdminDashboard.css */
+
+/* Variables */
+:root {
+  --primary-blue: #002e5d;
+  --cyan: #00b2b2;
+  --green: #10b981;
+  --red: #ef4444;
+  --yellow: #f59e0b;
+  --white: #ffffff;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Base styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--gray-50);
+  color: var(--gray-800);
+}
+
+/* Layout */
+.admin-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  margin-left: -1.5rem; /* shift left */
+  padding: 0;
+}
+
+.admin-header {
+  background-color: var(--white);
+  box-shadow: var(--shadow-sm);
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 200%;
+  margin: 0 auto;
+  border-radius: 0.5rem;
+}
+
+.header-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gray-800);
+}
+
+.logo {
+  height: 2.5rem;
+  cursor: pointer;
+}
+
+.admin-main {
+  flex: 1;
+  padding: 2rem;
+  padding-left: 3rem;
+  padding-right: 2rem;
+}
+
+.dashboard-card {
+  background-color: var(--white);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  width: 100%;
+}
+
+/* Card header */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.header-controls {
+  display: flex;
+  gap: 1rem;
+}
+
+/* Search & Filter */
+.search-container {
+  position: relative;
+}
+
+.search-input {
+  padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+  border: 1px solid var(--gray-300);
+  border-radius: 0.375rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 2px rgba(0, 178, 178, 0.2);
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 1rem;
+  width: 1rem;
+  color: var(--gray-400);
+}
+
+.filter-button {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background-color: var(--gray-100);
+  border: none;
+  border-radius: 0.375rem;
+  color: var(--gray-700);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.filter-button:hover {
+  background-color: var(--gray-200);
+}
+
+.filter-icon,
+.dropdown-icon {
+  height: 1rem;
+  width: 1rem;
+}
+
+.filter-icon {
+  margin-right: 0.5rem;
+}
+
+.dropdown-icon {
+  margin-left: 0.5rem;
+}
+
+/* Table */
+.table-container {
+  overflow-x: auto;
+}
+
+.freelancers-table {
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.freelancers-table th {
+  padding: 0.75rem 1.5rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gray-500);
+  background-color: var(--gray-50);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.freelancers-table td {
+  padding: 1rem 1.5rem;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--gray-200);
+  font-size: 0.875rem;
+}
+
+.freelancer-info {
+  display: flex;
+  align-items: center;
+}
+
+.avatar {
+  height: 2.5rem;
+  width: 2.5rem;
+  border-radius: 9999px;
+  background-color: var(--cyan);
+  color: var(--white);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.name {
+  margin-left: 1rem;
+  font-weight: 500;
+}
+
+.status-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  display: inline-flex;
+}
+
+.status-badge.pending {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: var(--yellow);
+}
+
+.status-badge.approved {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--green);
+}
+
+.status-badge.rejected {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--red);
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-button {
+  padding: 0.25rem;
+  border: none;
+  background: transparent;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-button svg {
+  height: 1.25rem;
+  width: 1.25rem;
+}
+
+.action-button.approve {
+  color: var(--green);
+}
+
+.action-button.approve:hover {
+  background-color: rgba(16, 185, 129, 0.1);
+}
+
+.action-button.reject {
+  color: var(--red);
+}
+
+.action-button.reject:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.action-button.more {
+  color: var(--gray-500);
+}
+
+.action-button.more:hover {
+  background-color: var(--gray-100);
+}
+
+.action-button.disabled {
+  color: var(--gray-400);
+  cursor: not-allowed;
+}
+
+.action-button.disabled:hover {
+  background-color: transparent;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+  font-size: 0.875rem;
+}
+
+.pagination-info {
+  color: var(--gray-700);
+}
+
+.bold {
+  font-weight: 500;
+}
+
+.pagination-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pagination-button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--gray-300);
+  border-radius: 0.375rem;
+  background-color: var(--white);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-700);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.pagination-button:hover {
+  background-color: var(--gray-50);
+}
