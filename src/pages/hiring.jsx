@@ -1,9 +1,9 @@
-// src/components/WorkoraLogin.jsx
+// src/pages/hiring.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles.css';
 
-const WorkoraLogin = () => {
+const Hiring = () => {
   const [hoveredButton, setHoveredButton] = useState(null);
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -148,4 +148,4 @@ const WorkoraLogin = () => {
   );
 };
 
-export default WorkoraLogin;
+export default Hiring;

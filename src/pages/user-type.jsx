@@ -6,7 +6,13 @@ export default function UserType() {
   const navigate = useNavigate();
 
   const handleUserTypeSelect = (type) => {
-    navigate('/login', { state: { userType: type } });
+    // Store user type in session storage and local storage
+    sessionStorage.setItem('userType', type);
+    localStorage.setItem('userType', type);
+    navigate('/login', { 
+      state: { userType: type },
+      replace: true 
+    });
   };
 
   return (

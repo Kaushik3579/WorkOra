@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -7,175 +7,87 @@ import {
   Text,
   Divider,
   useToast,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalBody,
-  FormControl,
-  FormLabel,
-  Input,
-  HStack
 } from '@chakra-ui/react';
 import { auth, db, googleProvider } from '../config/firebase';
-import { signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithPopup, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import DomainSelectionModal from '../components/DomainSelectionModal';
-import UserDetailsForm from '../components/UserDetailsForm';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [showDomainModal, setShowDomainModal] = useState(false);
-  const [showDetailsForm, setShowDetailsForm] = useState(false);
-  const [tempUserData, setTempUserData] = useState(null);
-  const [userType, setUserType] = useState(null);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  
+  // Get user type from multiple sources with priority
+  const userType = location.state?.userType || 
+                  sessionStorage.getItem('selectedUserType') || 
+                  localStorage.getItem('selectedUserType');
 
-  const navigateToUserDashboard = (type) => {
-    switch (type) {
-      case 'admin':
-        navigate('/admin/dashboard');
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          // Existing user - go to dashboard
+          const userData = userDoc.data();
+          redirectToDashboard(userData.userType);
+        } else if (userType) {
+          // New user - create account with selected type
+          await createNewUser(user);
+          redirectToDashboard(userType);
+        } else {
+          // No type selected - go back to selection
+          navigate('/');
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [userType]);
+
+  const redirectToDashboard = (type) => {
+    // Clear storage after successful redirect
+    sessionStorage.removeItem('selectedUserType');
+    localStorage.removeItem('selectedUserType');
+
+    switch(type) {
+      case 'admin': 
+        navigate('/admin/dashboard', { replace: true }); 
         break;
-      case 'client':
-        navigate('/client/dashboard');
+      case 'client': 
+        navigate('/client/dashboard', { replace: true }); 
         break;
-      case 'freelancer':
-        navigate('/freelancer/dashboard');
+      case 'freelancer': 
+        navigate('/freelancer/dashboard', { replace: true }); 
         break;
-      default:
-        navigate('/');
+      default: 
+        navigate('/', { replace: true });
     }
   };
 
-  const createNewUser = async (userData, userDetails, domains = []) => {
-    await setDoc(doc(db, 'users', userData.uid), {
-      email: userData.email,
+  const createNewUser = async (user) => {
+    await setDoc(doc(db, 'users', user.uid), {
+      email: user.email,
       userType: userType,
       createdAt: serverTimestamp(),
       lastLogin: serverTimestamp(),
-      displayName: userDetails.fullName,
-      photoURL: userData.photoURL || '',
-      description: userDetails.description,
-      skills: userDetails.skills.split(',').map(skill => skill.trim()),
-      hourlyRate: userDetails.hourlyRate || '',
-      phone: userDetails.phone || '',
-      location: userDetails.location || '',
-      experience: userDetails.experience || '',
-      domain: userDetails.domain || '',
-      ...(userType === 'freelancer' && { domains }),
+      displayName: user.displayName || '',
+      photoURL: user.photoURL || ''
     });
-    
-    toast({
-      title: 'Account created',
-      description: 'Welcome to Workora!',
-      status: 'success',
-      duration: 5000,
-      isClosable: true,
-    });
-    
-    navigateToUserDashboard(userType);
-  };
-
-  const handleUserDetails = async (userDetails) => {
-    if (tempUserData) {
-      if (userType === 'freelancer') {
-        setShowDetailsForm(false);
-        setShowDomainModal(true);
-        setTempUserData({
-          ...tempUserData,
-          userDetails
-        });
-      } else {
-        await createNewUser(tempUserData, userDetails);
-        setTempUserData(null);
-        setShowDetailsForm(false);
-      }
-    }
-  };
-
-  const handleDomainSelection = async (selectedDomains) => {
-    if (tempUserData && tempUserData.userDetails) {
-      await createNewUser(tempUserData, tempUserData.userDetails, selectedDomains);
-      setTempUserData(null);
-    }
-    setShowDomainModal(false);
   };
 
   const handleGoogleLogin = async () => {
-    setIsLoading(true);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const userDoc = await getDoc(doc(db, 'users', result.user.uid));
-
-      if (!userDoc.exists()) {
-        // New user - create profile with selected type
-        if (!userType) {
-          navigate('/');
-          return;
-        }
-
-        setTempUserData(result.user);
-        setShowDetailsForm(true);
-        setIsLoading(false);
-        return;
-      } else {
-        // Existing user - update last login and redirect
-        const userData = userDoc.data();
-        await setDoc(doc(db, 'users', result.user.uid), {
-          lastLogin: serverTimestamp()
-        }, { merge: true });
-        
-        navigateToUserDashboard(userData.userType);
-      }
-    } catch (error) {
-      let errorMessage = error.message;
-      if (error.code === 'auth/popup-blocked') {
-        errorMessage = 'Please allow popups for Google sign-in';
-      }
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    } finally {
-      if (!showDetailsForm && !showDomainModal) {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  const handleEmailLogin = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-      
-      if (!userDoc.exists()) {
-        throw new Error('Account not found');
-      }
-
-      const userData = userDoc.data();
-      
-      // Update last login
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
-        lastLogin: serverTimestamp()
-      }, { merge: true });
-
-      navigateToUserDashboard(userData.userType);
+      setIsLoading(true);
+      await signInWithPopup(auth, googleProvider);
     } catch (error) {
       toast({
-        title: 'Error',
+        title: 'Login Error',
         description: error.message,
         status: 'error',
         duration: 5000,
         isClosable: true,
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -186,7 +98,7 @@ export default function Login() {
         <Text fontSize="2xl" fontWeight="bold" textAlign="center">
           {userType ? `Sign in as ${userType}` : 'Sign In'}
         </Text>
-
+        
         <Button
           onClick={handleGoogleLogin}
           isLoading={isLoading}
@@ -196,69 +108,17 @@ export default function Login() {
         >
           Continue with Google
         </Button>
-
-        <HStack>
-          <Divider />
-          <Text fontSize="sm" whiteSpace="nowrap" color="gray.500">
-            or use email
-          </Text>
-          <Divider />
-        </HStack>
-
-        <form onSubmit={handleEmailLogin}>
-          <VStack spacing={4}>
-            <FormControl isRequired>
-              <FormLabel>Email</FormLabel>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-              />
-            </FormControl>
-
-            <FormControl isRequired>
-              <FormLabel>Password</FormLabel>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-              />
-            </FormControl>
-
-            <Button
-              type="submit"
-              colorScheme="blue"
-              width="100%"
-              isLoading={isLoading}
-            >
-              Sign In with Email
-            </Button>
-          </VStack>
-        </form>
+        
+        {!userType && (
+          <Button 
+            onClick={() => navigate('/')} 
+            variant="outline"
+            size="lg"
+          >
+            Back to Selection
+          </Button>
+        )}
       </VStack>
-
-      <Modal isOpen={showDetailsForm} onClose={() => {}} size="xl">
-        <ModalOverlay />
-        <ModalContent p={6}>
-          <ModalBody>
-            <UserDetailsForm
-              userType={userType}
-              onSubmit={handleUserDetails}
-              initialData={{
-                fullName: tempUserData?.displayName || '',
-              }}
-            />
-          </ModalBody>
-        </ModalContent>
-      </Modal>
-
-      <DomainSelectionModal
-        isOpen={showDomainModal}
-        onClose={() => setShowDomainModal(false)}
-        onSubmit={handleDomainSelection}
-      />
     </Box>
   );
 }
